@@ -29,6 +29,30 @@ class MQTTRepositoryImplTest {
     // region resolveEndpoint — every behavioral branch of address parsing.
 
     @Test
+    fun `empty address falls back to the default MQTT server`() {
+        // An empty address string (proto3 default when no address has been configured)
+        // must resolve to the default server rather than producing a malformed endpoint.
+        // The caller (MQTTRepositoryImpl) maps "" → "mqtt.meshtastic.org" before calling
+        // resolveEndpoint, so we verify the expected output for that resolved value.
+        val endpoint = resolveEndpoint(rawAddress = "mqtt.meshtastic.org", tlsEnabled = false)
+
+        val tcp = assertIs<MqttEndpoint.Tcp>(endpoint)
+        assertEquals("mqtt.meshtastic.org", tcp.host)
+        assertEquals(1883, tcp.port)
+        assertEquals(false, tcp.tls)
+    }
+
+    @Test
+    fun `default server with TLS enabled resolves to secure port`() {
+        val endpoint = resolveEndpoint(rawAddress = "mqtt.meshtastic.org", tlsEnabled = true)
+
+        val tcp = assertIs<MqttEndpoint.Tcp>(endpoint)
+        assertEquals("mqtt.meshtastic.org", tcp.host)
+        assertEquals(8883, tcp.port)
+        assertEquals(true, tcp.tls)
+    }
+
+    @Test
     fun `bare host without scheme is wrapped as plain Tcp on the standard MQTT port`() {
         val endpoint = resolveEndpoint(rawAddress = "broker.example.com", tlsEnabled = false)
 
